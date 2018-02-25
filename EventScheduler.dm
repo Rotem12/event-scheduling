@@ -96,6 +96,9 @@ EventScheduler
 		set_sleep_delay(var/delay as num)
 			src.__sleep_delay = delay
 
+			if(src.__sleep_delay <= 0)
+				src.__last_tick = world.time
+
 		/**
 		 * Starts the event loop. You can use this with stop() to be selective about
 		 * when the event loop runs, or to turn off all scheduled events when you are
@@ -104,6 +107,10 @@ EventScheduler
 		start()
 			if (!src.__running)
 				src.__running = 1
+
+				if(src.__sleep_delay <= 0)
+					src.__last_tick = world.time
+
 				spawn() src.__loop()
 
 		/**
@@ -121,6 +128,9 @@ EventScheduler
 		list/__scheduled_events = new()
 		__tick					= 0
 		__sleep_delay			= 1
+
+		tmp
+			__last_tick
 
 	proc
 		__shift_down_events()
@@ -151,7 +161,11 @@ EventScheduler
 			return result
 
 		__iteration()
-			src.__tick+=src.__sleep_delay
+			if(src.__sleep_delay <= 0)
+				src.__tick+=world.time - src.__last_tick
+				src.__last_tick=world.time
+			else
+				src.__tick+=src.__sleep_delay
 			var/list/execute = src.__shift_down_events()
 			if (execute)
 				QuickSort(execute, /EventScheduler/proc/__sort_priorities)
